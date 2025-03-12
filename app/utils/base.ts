@@ -1,11 +1,11 @@
-import videojs from 'video.js'
-import 'videojs-youtube'
-import "video.js/dist/video-js.css";
 import { Material, SkinnedMesh } from 'three';
+import videojs from 'video.js';
+import "video.js/dist/video-js.css";
+import 'videojs-youtube';
 
 
 function onProgress(xhr: { lengthComputable: any; loaded: number; total: number; }) {
-    
+
     const loading = document.getElementById("loading")!
     let progressMap: Record<number, number> = {};
     window.onload = () => {
@@ -31,7 +31,7 @@ function onProgress(xhr: { lengthComputable: any; loaded: number; total: number;
 }
 
 function withProgress(resp: Response, totalSize: number) {
-    
+
     const loading = document.getElementById("loading")!
     if (!totalSize) {
         totalSize = parseInt(resp.headers.get('content-length') as string, 10);
@@ -54,40 +54,6 @@ function withProgress(resp: Response, totalSize: number) {
             controller.close();
         },
     }));
-}
-
-let init = false
-async function loadMusicFromYT(api: { [x: string]: any; musicYtURL: any; musicName: any; musicURL: string; }) {
-    const player = videojs.getPlayer("rawPlayer")
-    player.src({
-        "type": "video/youtube",
-        "src": api.musicYtURL
-    })
-
-    // workaroud for yt policy
-    if (!init) {
-        const savedTime = api["currentTime"]
-        const savedVolume = api["volume"]
-        await player.play()
-        player.volume(0.0);
-        player.on('play', async () => {
-            if (!init) {
-                player.pause()
-                await player.play()
-                player.pause()
-                player.volume(savedVolume);
-            }
-        })
-        player.on('pause', () => {
-            if (!init) {
-                player.currentTime(savedTime);
-                init = true
-            }
-        })
-    }
-
-    api.musicName = (player.tech(true) as any).ytPlayer.videoTitle
-    api.musicURL = "";
 }
 
 function dataURItoBlobUrl(dataURI: string) {
@@ -124,10 +90,10 @@ function saveCurrTime(api: { currentTime: any; }, currTime: any) {
     }
 }
 
-function blobToBase64(blob: Blob) {
+function blobToBase64(blob: Blob): Promise<string> {
     return new Promise((resolve, _) => {
         const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result);
+        reader.onloadend = () => resolve(reader.result as string);
         reader.readAsDataURL(blob);
     });
 }
@@ -163,4 +129,8 @@ function disposeMesh(obj: SkinnedMesh) {
     }
 }
 
-export { withTimeElapse, onProgress, dataURItoBlobUrl, loadMusicFromYT, saveCurrTime, blobToBase64, withProgress, startFileDownload, disposeMesh }
+function debugWait(ms = 2000) {
+    return new Promise((res) => setTimeout(() => res(true), ms))
+}
+
+export { blobToBase64, dataURItoBlobUrl, debugWait, disposeMesh, onProgress, saveCurrTime, startFileDownload, withProgress, withTimeElapse };

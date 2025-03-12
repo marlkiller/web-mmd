@@ -6,23 +6,32 @@
   </a>
 </p>
 
-Try it now! -> https://culdo.github.io/web-mmd/
+[> Try it now ! <](https://culdo.github.io/web-mmd/)
 
-For who wants to play MMD in the browser, you can now play it anywhere.
+For who wants to play MMD in the browser, now you can play it anywhere.
 
-It is improved version of [the three.js example](https://threejs.org/examples/#webgl_loader_mmd_audio).\
-It also use [the postprocessing lib](https://github.com/pmndrs/postprocessing) for effects.
+This project is inspired by [the amazing three.js example](https://takahirox.github.io/three.js/examples/webgl_loader_mmd_audio.html) which by @takahirox.
 
 # Features
 * Play MMD with time control bar(time seeking, jump to time...etc)
 * Change Model, Stage, Motion, Camera and Music(From YT or file)
-* Turn on/off auto camera(can playing manually)
+* Turn on/off auto camera(can play manually)
 * Adjust shadow/outline/color/...etc
 * Layout settings (Auto-hide gui/Show FPS/Fullscreen...etc)
 * Presets (open/save-as/copy/export as `JSON` format)
-* Camera Composition mode (create/del/next/prev camera cut)
-* Camera Fixed-Follow mode (can adjust using orbit controls)
-* Keyboard Shortcuts(play/pause, toggle camera mode, manipulate camera cut...)
+* Camera Composition mode (create/delete/jump forward/backward camera cuts)
+* Camera Fixed-Follow mode (can adjust using mouse)
+* Camera Editor mode (can edit on dope-sheet timeline)
+* Keyboard Shortcuts(play/pause, toggle camera mode, manipulate camera cuts...)
+
+# Keyboard shortcuts
+* **Space**: Play/Pause
+* **`** : Toggle Camera mode (between motion and composite mode)
+* **<** : Previous frame (under 30 fps) 
+* **\>** : Next frame (under 30 fps)
+* At camera composite mode
+  * **→** : Previous keyframe
+  * **←** : Next keyframe
 
 # Demo credits
 * music: GimmexGimme by 八王子P × Giga
@@ -33,23 +42,24 @@ It also use [the postprocessing lib](https://github.com/pmndrs/postprocessing) f
 * stage: RedialC_EpRoomDS by RedialC
 
 # Development
-* Run `npm run dev`
-
-Modules which mainly come from [the three.js example](https://threejs.org/examples/#webgl_loader_mmd_audio) is refactored to Classes and Async/Await styles.
-This projects is refactored to using `Next.js`(TypeScript).
+1. Install deps via `npm install`
+2. Run `npm run dev`
+* Modules which mainly come from [the three.js example](https://threejs.org/examples/#webgl_loader_mmd_audio) is refactored to Classes and Async/Await styles.
+* This projects is refactored to using `Next.js`(TypeScript).
 
 ## Tech stacks
 * `three.js` (For MMD)
 * `postprocessing.js` (For effects)
+* `theatre.js` (For camera editor mode)
 * `Next.js` (For static site generating)
-* `video.js` (For audio from YT)
+* `media-chrome` (For audio from YT)
 * `playwright` (For testing)
 
 ## E2E Testing using Playwright
 Run `npm test`
 
 ## CI/CD
-It use `Github Action` to auto deploy the demo site. Relative files located at `./.github/workflows`
+It uses `Github Action` to deploy the demo site. Relative files located at `./.github/workflows`.
 
 # To-do list
 ## Done
@@ -65,9 +75,15 @@ It use `Github Action` to auto deploy the demo site. Relative files located at `
 - [x] camera Fixed-Follow mode
 - [x] PBR rendering
 - [x] refactor to Typescript
+- [x] refactor to @react-three eco-system
+- [x] Skybox rendering
+- [x] timeline editor
+    - [x] camera composition mode
+    - [x] camera editor mode (using Theatre.js)
 
 ## WIP
-- [ ] timeline editor
-    - [x] camera composition mode
+- [ ] Better bone animation
+
 ## Planning
 - [ ] In-APP Credits list
+- [ ] Efficient Bokeh effect

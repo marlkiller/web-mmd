@@ -1,9 +1,33 @@
-function SceneTimeline({ children = null }: 
+import useGlobalStore from "@/app/stores/useGlobalStore";
+import { CameraMode } from '@/app/types/camera';
+import usePresetStore from "@/app/stores/usePresetStore";
+import { useEffect, useRef } from "react";
+import styles from "./styles.module.css";
+
+function SceneTimeline({ children = null }:
   { children?: React.ReactNode }) {
+  const isComposite = usePresetStore(state => state["camera mode"]) == CameraMode.COMPOSITION
+
+  const beatsBufferRef = useGlobalStore(state => state.beatsBufferRef)
+
+  const scrollingBar = useRef<HTMLDivElement>()
+  useEffect(() => {
+
+    // add buffer beats
+    [...Array(30)].map(_ => {
+      const beatEl = document.createElement("div")
+      beatEl.className = "cut"
+      beatEl.style.display = "none"
+      scrollingBar.current.appendChild(beatEl)
+      beatsBufferRef.current.push(beatEl)
+      return beatEl
+    })
+  }, [])
+
   return (
-    <div className="scrolling-bar">
+    <div ref={scrollingBar} className={styles["scrolling-bar"]} style={{ display: isComposite ? "block" : "none" }}>
       <hr />
-      <div className="hit-point"></div>
+      <div className={styles["hit-point"]}></div>
       {children}
     </div>
   );

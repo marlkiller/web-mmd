@@ -1,26 +1,26 @@
-import Image from "next/image";
+"use client"
+
+import { Canvas } from "@react-three/fiber";
 import LoadingOverlay from "./components/loading-overlay";
 import SceneTimeline from "./components/scene-timeline";
-import WebMMDComp from "./components/web-mmd";
-import fullscreen from "./components/fullscreen/fullscreen.svg"
+import ThreeWorld from "./components/three-world";
+import Effects from "./components/effects";
+import ControlBar from "./components/control-bar";
+import FileSelector from "./components/file-selector";
+import Panel from "./components/panel";
 
 export default function Home() {
-
   return (
     <>
       <LoadingOverlay></LoadingOverlay>
       <SceneTimeline></SceneTimeline>
-      <WebMMDComp></WebMMDComp>
-      <audio
-        id="rawPlayer"
-        className="video-js vjs-default-skin"
-        controls
-      >
-      </audio>
-      <input id="selectFile" type="file" />
-      <div id="button">
-        <Image src={fullscreen} alt="fullscreen" height="24" width="24" />
-      </div>
+      <Canvas shadows>
+        <ThreeWorld />
+        <Effects></Effects>
+      </Canvas>
+      <ControlBar></ControlBar>
+      <FileSelector></FileSelector>
+      <Panel></Panel>
     </>
-  );
+  )
 }
