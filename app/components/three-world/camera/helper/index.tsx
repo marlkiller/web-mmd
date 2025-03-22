@@ -6,7 +6,15 @@ import { useEffect } from "react";
 import CompositeMode from "./composite-mode";
 import FixFollowMode from "./fix-follow-mode";
 import MotionFileMode from "./motion-file-mode";
-import EditorMode from './editor-mode';
+import dynamic from 'next/dynamic';
+const EditorMode = dynamic(() => import('./editor-mode'), { ssr: false })
+
+const cameraModeMap = [
+    MotionFileMode,
+    CompositeMode,
+    FixFollowMode,
+    EditorMode
+]
 
 function CameraWorkHelper() {
     const cameraMode = usePresetStore(state => state["camera mode"])
@@ -43,22 +51,9 @@ function CameraWorkHelper() {
         })
     }, [])
 
-    return (
-        <>
-            {
-                cameraMode == CameraMode.COMPOSITION && <CompositeMode></CompositeMode>
-            }
-            {
-                cameraMode == CameraMode.MOTION_FILE && <MotionFileMode></MotionFileMode>
-            }
-            {
-                cameraMode == CameraMode.FIXED_FOLLOW && <FixFollowMode></FixFollowMode>
-            }
-            {
-                cameraMode == CameraMode.EDITOR && <EditorMode></EditorMode>
-            }
-        </>
-    );
+    const Mode = cameraModeMap[cameraMode]
+
+    return <Mode />
 }
 
 export default CameraWorkHelper;

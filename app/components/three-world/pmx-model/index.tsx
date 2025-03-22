@@ -1,27 +1,26 @@
-import { useEffect, useState } from "react"
-import { Skeleton, SkinnedMesh } from "three"
+import { ReactNode, useEffect, useRef, useState } from "react"
+import { Skeleton, SkinnedMesh, Vector3 } from "three"
 import { initBones, MMDLoader } from "@/app/modules/MMDLoader"
 import useGlobalStore from "@/app/stores/useGlobalStore"
 import { onProgress } from "@/app/utils/base"
 import { SkinnedMeshProps, useThree } from "@react-three/fiber"
+import { ModelContext } from "../ModelHelper/ModelContext"
 
 type PMXModelProps = {
     url: string,
     modelTextures: Record<string, string>,
     enableSdef: boolean,
     enablePBR: boolean,
-    children?: JSX.Element | JSX.Element[],
+    position?: [number, number, number],
+    children?: ReactNode,
     onCreate?: (mesh: SkinnedMesh) => void,
-    onCreatePromise?: (promise: Promise<SkinnedMesh>) => void
     onDispose?: () => void
 } & Partial<SkinnedMeshProps>
 
-function PMXModel({ url, modelTextures, enableSdef = false, enablePBR = true, children, onCreate, onCreatePromise, onDispose, ...props }: PMXModelProps) {
+function PMXModel({ url, modelTextures, enableSdef = false, enablePBR = true, position = null, children, onCreate, onDispose, ...props }: PMXModelProps) {
 
     const loader = useGlobalStore(state => state.loader)
     const [initProps, setProps] = useState<Awaited<ReturnType<MMDLoader["loadAsync"]>>>()
-    const [resolve, setResolve] = useState<(mesh:SkinnedMesh)=>void>()
-    const camera = useThree(state => state.camera)
 
     useEffect(() => {
         const params = {
@@ -34,8 +33,6 @@ function PMXModel({ url, modelTextures, enableSdef = false, enablePBR = true, ch
             });
         }
 
-        onCreatePromise?.(new Promise(res => setResolve(() => res)))
-
         const init = async () => {
             const initProps = await loader
                 .setModelParams(params)
@@ -44,33 +41,44 @@ function PMXModel({ url, modelTextures, enableSdef = false, enablePBR = true, ch
         }
         init()
 
-        if(onDispose) 
-            return onDispose
-    }, [url, modelTextures, enableSdef, enablePBR, camera])
+        return () => {
+            setInited(false)
+            onDispose?.()
+        }
+    }, [url, modelTextures, enableSdef, enablePBR])
 
     const [mesh, setMesh] = useState<SkinnedMesh>()
+    const [inited, setInited] = useState<boolean>()
     useEffect(() => {
         if (!mesh) return
         const [bones, rootBones] = initBones(geometry)
-		for (const root of rootBones) {
-			mesh.add(root)
-		}
-		const skeleton = new Skeleton(bones);
-		mesh.bind(skeleton);
+        for (const root of rootBones) {
+            mesh.add(root)
+        }
+        const skeleton = new Skeleton(bones);
+        mesh.bind(skeleton);
+        if(position) {
+            mesh.position.fromArray(position)
+        }
         onCreate?.(mesh)
-        resolve?.(mesh)
+        setInited(true)
     }, [mesh])
+
+    const runtimeHelper = useRef({})
 
     if (!initProps) return
 
     const { data, geometry, material } = initProps
+
     return (
         <skinnedMesh
             name={data.metadata.modelName}
             args={[geometry, material]}
             ref={mesh => mesh && setMesh(mesh)}
             {...props}>
-            {children}
+            <ModelContext.Provider value={{ mesh: mesh, runtimeHelper }}>
+                {inited && children}
+            </ModelContext.Provider>
         </skinnedMesh>
     )
 }

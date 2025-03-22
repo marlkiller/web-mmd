@@ -1,32 +1,40 @@
 import useGlobalStore from "@/app/stores/useGlobalStore";
 import usePresetStore from "@/app/stores/usePresetStore";
-import { buildGuiItem, buildLoadFileFn, buildLoadModelFn } from "@/app/utils/gui";
-import { button, useControls } from "leva";
+import { buildGuiItem, buildGuiObj, buildLoadFileFn, buildLoadModelFn } from "@/app/utils/gui";
+import { button, folder, useControls } from "leva";
 import * as THREE from 'three';
 import PmxModel from "../pmx-model";
 import { ThreeEvent } from "@react-three/fiber";
 import WithReady from "@/app/stores/WithReady";
+import { Helper } from "@react-three/drei";
+import { SkeletonHelper } from "three";
+import { CCDIKHelper } from "three/examples/jsm/Addons.js";
+import { ReactNode } from "react";
 
-function Model() {
+function Model({ children }: { children: ReactNode }) {
     const characterName = usePresetStore(state => state.character)
     const motionName = usePresetStore(state => state.motion)
     const pmxFiles = usePresetStore(state => state.pmxFiles)
-    const enableSdef = usePresetStore(state => state["enable SDEF"])
-    const enablePBR = usePresetStore(state => state["enable PBR"])
-    const selfShadow = usePresetStore(state => state["self shadow"])
-
     const positionKey = "Character.position"
-    const position = usePresetStore(state => state[positionKey])
-
     const url = pmxFiles.character[characterName]
+    const runtimeMesh = useGlobalStore(state => state.character)
 
-    const [_, set] = useControls('Character', () => ({
+    const [{
+        position,
+        "enable SDEF": enableSdef,
+        "enable PBR": enablePBR,
+        "self shadow": selfShadow,
+        "show IK bones": showIkBones,
+        "show skeleton": showSkeleton
+    }, set] = useControls('Character', () => ({
         "model": {
             value: characterName,
             options: Object.keys(pmxFiles.character),
             onChange: (value, path, options) => {
                 if (!options.initial) {
                     usePresetStore.setState({ character: value })
+                } else {
+                    set({model: characterName})
                 }
             },
         },
@@ -53,10 +61,18 @@ function Model() {
             })
             selectFile.click();
         }),
+        "debug": folder({
+            ...buildGuiObj("enable SDEF"),
+            ...buildGuiObj("enable PBR"),
+            ...buildGuiObj("self shadow"),
+            ...buildGuiObj("show IK bones"),
+            ...buildGuiObj("show skeleton"),
+        }, { collapsed: true }),
     }), { collapsed: true, order: 2 }, [pmxFiles.character, motionName])
 
     return (
         <PmxModel
+            name={positionKey}
             position={position}
             url={url}
             modelTextures={pmxFiles.modelTextures.character[characterName]}
@@ -79,6 +95,9 @@ function Model() {
             }}
         >
             <object3D name="smoothCenter"></object3D>
+            {children}
+            {showSkeleton && <Helper type={SkeletonHelper}></Helper>}
+            {showIkBones && <Helper type={CCDIKHelper} args={[runtimeMesh?.geometry.userData.MMD.iks]}></Helper>}
         </PmxModel>
     );
 }
