@@ -104,8 +104,7 @@ function buildMaterialGuiFunc(targetModel: THREE.SkinnedMesh, targetMaterialIdx:
 
         const targetProp = _.get(targetMaterial, key)
 
-        const initValFromMaterial = targetProp instanceof THREE.Color ? `#${targetProp.getHexString()}` : targetProp
-        const initialValue = _.get(usePresetStore.getState(), configPath) ?? initValFromMaterial
+        const initialValue = targetProp instanceof THREE.Color ? `#${targetProp.getHexString()}` : targetProp
 
         let handler: OnChangeHandler;
         let options: Record<string, any>;

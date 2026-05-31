@@ -40,34 +40,17 @@ function Material() {
         }
     }
 
-    const buildFaceForwardFn = (idx: number) => {
-        return (ratio: number) => {
-            const group = geometry.groups[idx]
-            for (let i = 0; i < group.count; i++) {
-                const idx = geometry.index.array[group.start + i]
-                const start = idx * normals.current.itemSize
-                const idxRange = [start, start + normals.current.itemSize]
 
-                const normalOrig = new THREE.Vector3(...normalsOrig.current.array.slice(...idxRange))
-                const targetAxis = new THREE.Vector3(0, 0.3, 1)
-                normalOrig.lerp(targetAxis, ratio)
-                normals.current.set(normalOrig.toArray(), start)
-            }
-            normals.current.needsUpdate = true;
-        }
-    }
-
-    const buildMGuiItem = buildMaterialGuiFunc(model, targetMaterialIdx)
-
-    const updateControls = (idx: number) => {
+    const updateControls = (idx: number, init = false) => {
         const material = materials[idx]
 
+        const buildMGuiItem = buildMaterialGuiFunc(model, targetMaterialIdx)
         const buildMapItem = (materialKey: string, userDataKey?: string, modifyTexture?: Function) => {
             const handler: OnChangeHandler = (texturePath: keyof typeof mapOptions) => {
                 const texture = mapOptions[texturePath]
                 if (texture === undefined || _.get(material, `${materialKey}.name`) === texturePath) return
                 _.set(material, materialKey, texture);
-                if(materialKey == 'map') {
+                if (materialKey == 'map') {
                     material.map.colorSpace = THREE.SRGBColorSpace
                     material.map.needsUpdate = true
                 }
@@ -89,6 +72,23 @@ function Material() {
             for (const [key, onBeforeCompile] of Object.entries(onBeforeCompiles)) {
                 onBeforeCompile(parameters, renderer)
             }
+        }
+        const targetAxis = new THREE.Vector3(0, 0.3, 1)
+        const normalOrig = new THREE.Vector3()
+        const faceForward = (ratio: number) => {
+            const group = geometry.groups[idx]
+            for (let i = 0; i < group.count; i++) {
+                const idx = geometry.index.array[group.start + i]
+                const start = idx * normals.current.itemSize
+
+                normalOrig.fromArray(normalsOrig.current.array, start)
+                const angle = normalOrig.angleTo(targetAxis)
+                if (angle < Math.PI * 0.6) {
+                    normalOrig.lerp(targetAxis, ratio)
+                    normals.current.set(normalOrig.toArray(), start)
+                }
+            }
+            normals.current.needsUpdate = true;
         }
         const smoothnessToRoughness = (texture: THREE.Texture) => {
             if (!texture) {
@@ -165,8 +165,17 @@ function Material() {
             material.customProgramCacheKey = () => cacheKey;
         }
 
+        if (init) {
+            const { faceForward, smoothnessMap, subNormalMap } = material.userData
+            faceForward(faceForward)
+            smoothnessToRoughness(mapOptions[smoothnessMap])
+            RNMapping(mapOptions[subNormalMap])
+            material.needsUpdate = true;
+            return
+        }
+
         setContollers({
-            "faceForward": buildMGuiItem("userData.faceForward", buildFaceForwardFn(idx), 0, 1),
+            "faceForward": buildMGuiItem("userData.faceForward", faceForward, 0, 1),
             'visible': buildMGuiItem("visible"),
             'color': buildMGuiItem("color"),
             'map': buildMapItem("map"),
@@ -247,13 +256,11 @@ function Material() {
                 subNormalMap: "none",
                 envMap: "none",
             }
-            _.merge(material.userData, userData)
             const savedMaterial = savedMaterials[material.name]
+            _.merge(material.userData, userData)
             if (savedMaterial) {
                 _.merge(material, savedMaterial)
-                if (savedMaterial.userData?.faceForward) {
-                    buildFaceForwardFn(idx)(savedMaterial.userData.faceForward)
-                }
+                updateControls(idx, true)
             }
         }
 
