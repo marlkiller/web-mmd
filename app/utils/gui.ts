@@ -125,16 +125,15 @@ function buildMaterialGuiFunc(targetModel: THREE.SkinnedMesh, targetMaterialIdx:
                 })
             } else {
                 value = initialValue
-                setLevaValue(path, initialValue)
+                if (path) setLevaValue(path, initialValue)
             }
             if (targetProp instanceof THREE.Color) {
                 targetProp.set(value)
             } else {
-                if (handler) {
-                    handler(value, path, context)
-                } else {
-                    _.set(targetMaterial, key, value)
-                }
+                _.set(targetMaterial, key, value)
+            }
+            if (handler) {
+                handler(value, path, context)
             }
         }
         if (typeof initialValue == "number") {

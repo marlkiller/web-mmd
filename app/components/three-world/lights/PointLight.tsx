@@ -13,7 +13,7 @@ function PointLight({ name }: { name?: string }) {
             intensity: {
                 ...buildFlexGuiItem<number>(`${guiName}.intensity`),
                 min: 0,
-                max: 10
+                max: 100
             },
             visible: {
                 value: false

@@ -9,6 +9,7 @@ import * as THREE from "three";
 import { useModel } from './ModelContext';
 import isRenderGui from './useRenderGui';
 import usePngTex from './usePngTex';
+import { ColorRepresentation } from 'three';
 
 function Material() {
     const model = useModel()
@@ -21,7 +22,7 @@ function Material() {
     const normals = useRef<THREE.BufferAttribute>(null)
     const normalsOrig = useRef<THREE.BufferAttribute>(null)
 
-    const [controllers, setContollers] = useState<Schema>()
+    const [controls, setControls] = useState<Schema>()
 
     const mapOptions = usePngTex(model)
 
@@ -43,8 +44,9 @@ function Material() {
 
     const updateControls = (idx: number, init = false) => {
         const material = materials[idx]
+        if (!material) return
 
-        const buildMGuiItem = buildMaterialGuiFunc(model, targetMaterialIdx)
+        const buildMGuiItem = buildMaterialGuiFunc(model, idx)
         const buildMapItem = (materialKey: string, userDataKey?: string, modifyTexture?: Function) => {
             const handler: OnChangeHandler = (texturePath: keyof typeof mapOptions) => {
                 const texture = mapOptions[texturePath]
@@ -122,15 +124,19 @@ function Material() {
                             '#include <uv_pars_vertex>',
                             `
                             #include <uv_pars_vertex>
-                            uniform mat3 subNormalMapTransform;
-                            varying vec2 vSubNormalMapUv;
+                            #ifdef USE_NORMALMAP
+                                uniform mat3 subNormalMapTransform;
+                                varying vec2 vSubNormalMapUv;
+                            #endif
                             `
                         )
                         .replace(
                             '#include <uv_vertex>',
                             `
                             #include <uv_vertex>
-                            vSubNormalMapUv = ( subNormalMapTransform * vec3( NORMALMAP_UV, 1 ) ).xy;
+                            #ifdef USE_NORMALMAP
+                                vSubNormalMapUv = ( subNormalMapTransform * vec3( NORMALMAP_UV, 1 ) ).xy;
+                            #endif
                             `
                         )
 
@@ -139,24 +145,30 @@ function Material() {
                             '#include <uv_pars_fragment>',
                             `
                             #include <uv_pars_fragment>
-                            varying vec2 vSubNormalMapUv;
+                            #ifdef USE_NORMALMAP
+                                varying vec2 vSubNormalMapUv;
+                            #endif
                             `
                         )
                         .replace(
                             '#include <normalmap_pars_fragment>',
                             `
                             #include <normalmap_pars_fragment>
-                            uniform sampler2D detailMap;
+                            #ifdef USE_NORMALMAP
+                                uniform sampler2D detailMap;
+                            #endif
                             `
                         )
                         .replace(
                             '#include <normal_fragment_maps>',
                             `
-                            vec3 t = texture2D(normalMap, vNormalMapUv).xyz * vec3(2, 2, 2) + vec3(-1, -1, 0);
-                            vec3 u = texture2D(detailMap, vSubNormalMapUv).xyz * vec3(-2, -2, 2) + vec3(1, 1, -1);
-                            vec3 mapN = (normalize(t * dot(t, u) - u * t.z) + 1.0) / 2.0;
-                            mapN.xy *= normalScale;
-                            normal = normalize( tbn * mapN );
+                            #ifdef USE_NORMALMAP
+                                vec3 t = texture2D(normalMap, vNormalMapUv).xyz * vec3(2, 2, 2) + vec3(-1, -1, 0);
+                                vec3 u = texture2D(detailMap, vSubNormalMapUv).xyz * vec3(-2, -2, 2) + vec3(1, 1, -1);
+                                vec3 mapN = (normalize(t * dot(t, u) - u * t.z) + 1.0) / 2.0;
+                                mapN.xy *= normalScale;
+                                normal = normalize( tbn * mapN );
+                            #endif
                             `
                         );
                 }
@@ -165,16 +177,14 @@ function Material() {
             material.customProgramCacheKey = () => cacheKey;
         }
 
-        if (init) {
-            const { faceForward: faceForwardRatio, smoothnessMap, subNormalMap } = material.userData
-            faceForward(faceForwardRatio)
-            smoothnessToRoughness(mapOptions[smoothnessMap])
-            RNMapping(mapOptions[subNormalMap])
-            material.needsUpdate = true;
-            return
+        const onSubNormalMapLoop = (val: number) => {
+            const subNormalMap = mapOptions[material.userData.subNormalMap]
+            if (!subNormalMap) return
+            subNormalMap.repeat.set(val, val)
+            subNormalMap.updateMatrix()
         }
 
-        setContollers({
+        const controls = {
             "faceForward": buildMGuiItem("userData.faceForward", faceForward, 0, 1),
             'visible': buildMGuiItem("visible"),
             'color': buildMGuiItem("color"),
@@ -201,15 +211,7 @@ function Material() {
             'fog': buildMGuiItem("fog", needsUpdate(material)),
             'normalMap': buildMapItem("normalMap"),
             'subNormalMap': buildMapItem("", "subNormalMap", RNMapping),
-            'subNormalMapLoop': {
-                value: 1,
-                onChange: (val) => {
-                    const subNormalMap = mapOptions[material.userData.subNormalMap]
-                    if (!subNormalMap) return
-                    subNormalMap.repeat.set(val, val)
-                    subNormalMap.updateMatrix()
-                }
-            },
+            'subNormalMapLoop': buildMGuiItem("userData.subNormalMapLoop", onSubNormalMapLoop),
             'envMap': buildMapItem("envMap"),
             'envMapIntensity': buildMGuiItem("envMapIntensity"),
             "reset All": button(() => {
@@ -236,11 +238,29 @@ function Material() {
                 'wireframe': buildMGuiItem("wireframe"),
                 'vertexColors': buildMGuiItem("vertexColors", needsUpdate(material)),
             }, { collapsed: true })
-        })
+        }
 
+        if (init) {
+            for (const mapKey of [
+                "map",
+                "emissiveMap",
+                "roughnessMap",
+                "smoothnessMap",
+                "metalnessMap",
+                "normalMap",
+                "subNormalMap",
+                "subNormalMapLoop",
+                "envMap"
+            ] as const) {
+                const controller = controls[mapKey]
+                controller.onChange(controller.value, null, { initial: true } as any)
+            }
+            return
+        }
+        setControls(controls)
     }
 
-    const initTargetMaterials = () => {
+    const initMaterials = () => {
         normalsOrig.current = geometry.attributes.normal.clone()
         normals.current = geometry.attributes.normal as THREE.BufferAttribute
 
@@ -254,11 +274,17 @@ function Material() {
                 metalnessMap: "none",
                 normalMap: "none",
                 subNormalMap: "none",
+                subNormalMapLoop: 1,
                 envMap: "none",
             }
             const savedMaterial = savedMaterials[material.name]
             _.merge(material.userData, userData)
             if (savedMaterial) {
+                for (const [key, val] of Object.entries(savedMaterial)) {
+                    if (CSS.supports('color', val as string)) {
+                        savedMaterial[key] = new THREE.Color(val as ColorRepresentation)
+                    }
+                }
                 _.merge(material, savedMaterial)
                 updateControls(idx, true)
             }
@@ -267,7 +293,7 @@ function Material() {
     }
 
     useEffect(() => {
-        initTargetMaterials();
+        initMaterials();
     }, [model])
 
     const materialMap = useMemo(() =>
@@ -284,8 +310,8 @@ function Material() {
             ...buildGuiItem("targetMaterialIdx"),
             options: materialMap,
         },
-        ...controllers
-    }, { collapsed: true, render: () => isRenderGui(model.name) }, [controllers, materialMap])
+        ...controls
+    }, { collapsed: true, render: () => isRenderGui(model.name) }, [controls, materialMap])
 
     return <></>;
 }
