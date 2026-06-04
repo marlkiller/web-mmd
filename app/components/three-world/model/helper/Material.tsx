@@ -52,7 +52,7 @@ function Material() {
                 const texture = mapOptions[texturePath]
                 if (texture === undefined || _.get(material, `${materialKey}.name`) === texturePath) return
                 _.set(material, materialKey, texture);
-                if (materialKey == 'map') {
+                if (materialKey == 'map' && material.map) {
                     material.map.colorSpace = THREE.SRGBColorSpace
                     material.map.needsUpdate = true
                 }
