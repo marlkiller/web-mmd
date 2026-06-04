@@ -166,8 +166,8 @@ function Material() {
         }
 
         if (init) {
-            const { faceForward, smoothnessMap, subNormalMap } = material.userData
-            faceForward(faceForward)
+            const { faceForward: faceForwardRatio, smoothnessMap, subNormalMap } = material.userData
+            faceForward(faceForwardRatio)
             smoothnessToRoughness(mapOptions[smoothnessMap])
             RNMapping(mapOptions[subNormalMap])
             material.needsUpdate = true;
