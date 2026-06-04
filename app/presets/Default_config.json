@@ -62,6 +62,7 @@
     "luminance enabled": true,
     "bloom threshold": 0.6500000000000001,
     "bloom smoothing": 1,
+    "envColor": "#ffffff",
     "envIntensity": 0.0,
     "envRotation": [
         0,

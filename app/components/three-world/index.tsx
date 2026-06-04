@@ -24,7 +24,7 @@ function ThreeWorld() {
             <Camera></Camera>
             <Controls></Controls>
             <Effects></Effects>
-            <Skybox hdrUrl='BRDF.hdr'></Skybox>
+            <Skybox></Skybox>
             <Debug></Debug>
             <CreditsList></CreditsList>
         </>
