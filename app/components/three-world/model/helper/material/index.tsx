@@ -248,7 +248,8 @@ function Material() {
                     _.unset(materials, [model.name, material.name])
                     return { materials: { ...materials } }
                 })
-                model.material[idx].copy(origMaterials[idx])
+                const materials = model.material as THREE.MeshPhysicalMaterial[]
+                materials[idx].copy(origMaterials[idx])
                 updateControls(idx)
             }),
             "debug": folder({

@@ -2,7 +2,7 @@ import { createContext, useContext } from 'react';
 import { SkinnedMesh, MeshPhysicalMaterial } from 'three';
 
 type ModelContextProps = {
-    mesh: SkinnedMesh & { material: MeshPhysicalMaterial[] }
+    mesh: SkinnedMesh
 }
 
 export const ModelContext = createContext<ModelContextProps>(null);
