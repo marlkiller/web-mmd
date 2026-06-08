@@ -17,6 +17,7 @@ export type PresetState = typeof defaultConfig & {
 } & {
     Light: Record<string, any>,
     materials: Record<string, Record<string, any>>
+    materialStyles: Record<string, any>,
 } & {
     models: Record<string, {
         fileName: string,

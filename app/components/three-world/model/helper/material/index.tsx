@@ -1,13 +1,13 @@
 import defaultConfig from '@/app/presets/Default_config.json';
 import usePresetStore from "@/app/stores/usePresetStore";
-import { buildGuiItem, buildMaterialGuiFunc } from "@/app/utils/gui";
+import { buildGuiItem, buildMaterialGuiFunc, setLevaValue } from "@/app/utils/gui";
 import { button, folder, useControls } from "leva";
 import { OnChangeHandler, Schema } from "leva/dist/declarations/src/types";
 import _ from "lodash";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
-import { useModel } from './ModelContext';
-import isRenderGui from './useRenderGui';
+import { useModel } from '../ModelContext';
+import isRenderGui from '../useRenderGui';
 import usePngTex from './usePngTex';
 import { ColorRepresentation } from 'three';
 
@@ -16,8 +16,11 @@ function Material() {
     const materials = model.material as THREE.MeshPhysicalMaterial[]
     const geometry = model.geometry
 
-    const targetMaterialIdx = usePresetStore(states => states.targetMaterialIdx)
+    const targetMaterialIdxSaved = usePresetStore(states => states.targetMaterialIdx)
+    const targetMaterialIdx = targetMaterialIdxSaved < materials.length ? targetMaterialIdxSaved : 0
+    const targetMaterial = materials[targetMaterialIdx]
     const savedMaterials = usePresetStore(states => states.materials)[model.name] ?? {}
+    const savedMaterial = savedMaterials[targetMaterial.name]
 
     const normals = useRef<THREE.BufferAttribute>(null)
     const normalsOrig = useRef<THREE.BufferAttribute>(null)
@@ -41,12 +44,29 @@ function Material() {
         }
     }
 
+    const defaultUserData = {
+        faceForward: 0,
+        map: "none",
+        emissiveMap: "none",
+        roughnessMap: "none",
+        smoothnessMap: "none",
+        metalnessMap: "none",
+        normalMap: "none",
+        normalMapLoop: 1,
+        subNormalMap: "none",
+        subNormalMapLoop: 1,
+        anisotropyMap: "none",
+        envMap: "none",
+    }
+
+    const stylesMap = useRef<Record<string, Set<number>>>({}).current
+    const origMaterials = useRef<THREE.MeshPhysicalMaterial[]>([]).current
 
     const updateControls = (idx: number, init = false) => {
         const material = materials[idx]
         if (!material) return
 
-        const buildMGuiItem = buildMaterialGuiFunc(model, idx)
+        const buildMGuiItem = buildMaterialGuiFunc(model, idx, origMaterials[idx])
         const buildMapItem = (materialKey: string, userDataKey?: string, modifyTexture?: Function) => {
             const handler: OnChangeHandler = (texturePath: keyof typeof mapOptions) => {
                 const texture = mapOptions[texturePath]
@@ -177,11 +197,14 @@ function Material() {
             material.customProgramCacheKey = () => cacheKey;
         }
 
-        const onSubNormalMapLoop = (val: number) => {
-            const subNormalMap = mapOptions[material.userData.subNormalMap]
-            if (!subNormalMap) return
-            subNormalMap.repeat.set(val, val)
-            subNormalMap.updateMatrix()
+        const buildMapLoop = (key: string, getTexture: () => THREE.Texture | null) => {
+            const handler = (val: number) => {
+                const texture = getTexture()
+                if (!texture) return
+                texture.repeat.set(val, val)
+                texture.updateMatrix()
+            }
+            return buildMGuiItem(`userData.${key}`, handler)
         }
 
         const controls = {
@@ -189,6 +212,9 @@ function Material() {
             'visible': buildMGuiItem("visible"),
             'color': buildMGuiItem("color"),
             'map': buildMapItem("map"),
+            'anisotropy': buildMGuiItem("anisotropy"),
+            'anisotropyMap': buildMapItem("anisotropyMap"),
+            'anisotropyRotation': buildMGuiItem("anisotropyRotation", null, 0, Math.PI * 2),
             'emissive': buildMGuiItem("emissive"),
             'emissiveMap': buildMapItem("emissiveMap"),
             'emissiveIntensity': buildMGuiItem("emissiveIntensity"),
@@ -208,14 +234,22 @@ function Material() {
             'clearcoatRoughness': buildMGuiItem("clearcoatRoughness"),
             'specularIntensity': buildMGuiItem("specularIntensity"),
             'specularColor': buildMGuiItem("specularColor"),
+            'thickness': buildMGuiItem("thickness"),
+            'transmission': buildMGuiItem("transmission"),
             'fog': buildMGuiItem("fog", needsUpdate(material)),
             'normalMap': buildMapItem("normalMap"),
+            'normalMapLoop': buildMapLoop("normalMapLoop", () => material.normalMap),
             'subNormalMap': buildMapItem("", "subNormalMap", RNMapping),
-            'subNormalMapLoop': buildMGuiItem("userData.subNormalMapLoop", onSubNormalMapLoop),
+            'subNormalMapLoop': buildMapLoop("subNormalMapLoop", () => mapOptions[material.userData.subNormalMap]),
             'envMap': buildMapItem("envMap"),
             'envMapIntensity': buildMGuiItem("envMapIntensity"),
             "reset All": button(() => {
-                usePresetStore.setState({ materials: defaultConfig.materials })
+                usePresetStore.setState(({ materials }) => {
+                    _.unset(materials, [model.name, material.name])
+                    return { materials: { ...materials } }
+                })
+                model.material[idx].copy(origMaterials[idx])
+                updateControls(idx)
             }),
             "debug": folder({
                 'only show this': {
@@ -241,18 +275,8 @@ function Material() {
         }
 
         if (init) {
-            for (const mapKey of [
-                "map",
-                "emissiveMap",
-                "roughnessMap",
-                "smoothnessMap",
-                "metalnessMap",
-                "normalMap",
-                "subNormalMap",
-                "subNormalMapLoop",
-                "envMap"
-            ] as const) {
-                const controller = controls[mapKey]
+            for (const controlKey of Object.keys(defaultUserData)) {
+                const controller = controls[controlKey]
                 controller.onChange(controller.value, null, { initial: true } as any)
             }
             return
@@ -260,36 +284,51 @@ function Material() {
         setControls(controls)
     }
 
+    const setFromStyle = (styleName: string, materialIdx: number) => {
+        const material = materials[materialIdx]
+        const styleConfig = { ...styles[styleName] }
+        const colors = {}
+        for (const [key, val] of Object.entries(styleConfig)) {
+            if (CSS.supports('color', val as string)) {
+                colors[key] = val
+                delete styleConfig[key]
+            }
+        }
+        _.merge(material, styleConfig)
+        for (const [key, val] of Object.entries(colors)) {
+            (material[key] as THREE.Color).set(val as ColorRepresentation)
+        }
+    }
+
     const initMaterials = () => {
         normalsOrig.current = geometry.attributes.normal.clone()
         normals.current = geometry.attributes.normal as THREE.BufferAttribute
 
         for (const [idx, material] of materials.entries()) {
-            const userData = {
-                faceForward: 0,
-                map: material.map?.name ?? "none",
-                emissiveMap: "none",
-                roughnessMap: "none",
-                smoothnessMap: "none",
-                metalnessMap: "none",
-                normalMap: "none",
-                subNormalMap: "none",
-                subNormalMapLoop: 1,
-                envMap: "none",
+            const userData = { ...defaultUserData }
+            if (material.map?.name) {
+                userData.map = material.map.name
             }
-            const savedMaterial = savedMaterials[material.name]
             _.merge(material.userData, userData)
+            origMaterials[idx] = material.clone()
+            const savedMaterial = savedMaterials[material.name]
             if (savedMaterial) {
                 for (const [key, val] of Object.entries(savedMaterial)) {
                     if (CSS.supports('color', val as string)) {
                         savedMaterial[key] = new THREE.Color(val as ColorRepresentation)
                     }
                 }
+                if (savedMaterial.userData?.style) {
+                    if (!stylesMap[savedMaterial.userData.style]) {
+                        stylesMap[savedMaterial.userData.style] = new Set()
+                    }
+                    stylesMap[savedMaterial.userData.style].add(idx)
+                    setFromStyle(savedMaterial.userData.style, idx)
+                }
                 _.merge(material, savedMaterial)
                 updateControls(idx, true)
             }
         }
-
     }
 
     useEffect(() => {
@@ -301,17 +340,70 @@ function Material() {
             materials.map((m, i) => [m.name, i])
         ), [model])
 
+    const styles = usePresetStore(states => states.materialStyles)
+    const styleOptions = useMemo(() => [
+        "none",
+        ...Object.keys(styles)
+    ], [styles])
+
     useEffect(() => {
         updateControls(targetMaterialIdx);
     }, [targetMaterialIdx])
 
-    useControls(`Model.${model.name}.Material`, {
+    const updateStyleMap = (styleName: string, prevStyleName: string, materialIdx: number) => {
+        stylesMap[prevStyleName]?.delete(materialIdx)
+        if (styleName != "none") {
+            if (!stylesMap[styleName]) {
+                stylesMap[styleName] = new Set()
+            }
+            stylesMap[styleName].add(materialIdx)
+        }
+    }
+
+    useControls(`Model.${model.name}.Material`, () => ({
         "targetMaterial": {
             ...buildGuiItem("targetMaterialIdx"),
             options: materialMap,
         },
-        ...controls
-    }, { collapsed: true, render: () => isRenderGui(model.name) }, [controls, materialMap])
+        "style": {
+            value: savedMaterial?.userData?.style ?? "none",
+            options: styleOptions,
+            onChange: (styleName: string, path, options) => {
+                if (options.initial) {
+                    setLevaValue(path, savedMaterial?.userData?.style ?? "none")
+                    return
+                }
+                const { targetMaterialIdx } = usePresetStore.getState()
+                updateStyleMap(styleName, savedMaterial?.userData?.style, targetMaterialIdx)
+                if (styleName != "none") {
+                    setFromStyle(styleName, targetMaterialIdx)
+                    updateControls(targetMaterialIdx)
+                }
+                usePresetStore.setState(({ materials }) => {
+                    _.set(materials, [model.name, targetMaterial.name, "userData", "style"], styleName)
+                    return { materials: { ...materials } }
+                })
+            }
+        },
+        "Save as style": button(() => {
+            const styleName = prompt("Enter style name:", savedMaterial?.userData?.style ?? "")
+            if (!styleName) return
+            updateStyleMap(styleName, savedMaterial?.userData?.style, targetMaterialIdx)
+            usePresetStore.setState(({ materials, materialStyles }) => {
+                const savedMaterial = materials[model.name]?.[targetMaterial.name] ?? {}
+                _.set(savedMaterial, ["userData", "style"], styleName)
+                materialStyles[styleName] = { ...savedMaterial }
+                return { materialStyles: { ...materialStyles } }
+            })
+            for (const materialIdx of stylesMap[styleName] ?? []) {
+                if (materialIdx == targetMaterialIdx) continue
+                setFromStyle(styleName, materialIdx)
+                updateControls(materialIdx, true)
+            }
+            setLevaValue(`Model.${model.name}.Material.style`, styleName)
+        }),
+        ...controls,
+    }), { collapsed: true, render: () => isRenderGui(model.name) }, [styleOptions, controls, materialMap])
 
     return <></>;
 }

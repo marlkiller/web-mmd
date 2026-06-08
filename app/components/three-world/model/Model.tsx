@@ -8,7 +8,7 @@ import dynamic from "next/dynamic";
 import { button, useControls } from "leva";
 import useConfigStore from "@/app/stores/useConfigStore";
 const Morph = dynamic(() => import('./helper/Morph'), { ssr: false })
-const Material = dynamic(() => import('./helper/Material'), { ssr: false })
+const Material = dynamic(() => import('./helper/material'), { ssr: false })
 const Physics = dynamic(() => import("./helper/Physics"), { ssr: false })
 const Animation = dynamic(() => import("./helper/Animation"), { ssr: false })
 

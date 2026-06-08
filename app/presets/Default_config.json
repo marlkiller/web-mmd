@@ -44,6 +44,7 @@
     "motionOffset": 0,
     "musicName": "",
     "materials": {},
+    "materialStyles": {},
     "targetMaterialIdx": 0,
     "bokeh enabled": false,
     "bokeh resolution": 480,

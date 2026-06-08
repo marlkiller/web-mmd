@@ -93,8 +93,8 @@ function buildFlexGuiItem<T>(path: string, handler?: OnChangeHandler) {
     }
 }
 
-function buildMaterialGuiFunc(targetModel: THREE.SkinnedMesh, targetMaterialIdx: number) {
-    return function buildMaterialGuiItem<const T extends keyof THREE.MeshPhysicalMaterial | `userData.${string}`>(key: T, handlerOrArgs?: OnChangeHandler | readonly [OnChangeHandler, Record<string, any>], min = 0, max = 1) {
+function buildMaterialGuiFunc(targetModel: THREE.SkinnedMesh, targetMaterialIdx: number, origMaterial: THREE.Material) {
+    return function buildMaterialGuiItem<const T extends keyof THREE.MeshPhysicalMaterial | `userData.${string}`>(key: T, handlerOrArgs?: OnChangeHandler | readonly [OnChangeHandler, Record<string, any>], min: number = undefined, max: number = undefined) {
 
         const materials = targetModel.material as any[]
 
@@ -117,7 +117,9 @@ function buildMaterialGuiFunc(targetModel: THREE.SkinnedMesh, targetMaterialIdx:
         const onChange: OnChangeHandler = (value, path, context) => {
             if (!context.initial) {
                 usePresetStore.setState((prevState) => {
-                    if (!(value instanceof THREE.Texture)) {
+                    if (value == _.get(origMaterial, key)) {
+                        _.unset(prevState, configPath)
+                    } else if (!(value instanceof THREE.Texture)) {
                         _.set(prevState, configPath, value)
                     }
                     const { materials } = prevState
