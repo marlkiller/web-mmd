@@ -98,10 +98,11 @@ function Material() {
         const targetAxis = new THREE.Vector3(0, 0.3, 1)
         const normalOrig = new THREE.Vector3()
         const faceForward = (ratio: number) => {
+            if (ratio <= 0) return
             const group = geometry.groups[idx]
             for (let i = 0; i < group.count; i++) {
-                const idx = geometry.index.array[group.start + i]
-                const start = idx * normals.current.itemSize
+                const vertexIdx = geometry.index.array[group.start + i]
+                const start = vertexIdx * normals.current.itemSize
 
                 normalOrig.fromArray(normalsOrig.current.array, start)
                 const angle = normalOrig.angleTo(targetAxis)
