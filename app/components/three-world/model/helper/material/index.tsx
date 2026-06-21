@@ -12,6 +12,7 @@ import usePngTex from './usePngTex';
 import { ColorRepresentation } from 'three';
 import defaultStyles from './default-styles.json'
 import lightsPhysicalFragment from './shaders/lights_physical_fragment.frag'
+import lightsPhysicalParsFragment from './shaders/lights_physical_pars_fragment.frag'
 
 function Material() {
     const model = useModel()
@@ -207,6 +208,10 @@ function Material() {
             } else {
                 onBeforeCompiles["AnisotropyMapping"] = (parameters, renderer) => {
                     parameters.fragmentShader = parameters.fragmentShader
+                        .replace(
+                            '#include <lights_physical_pars_fragment>',
+                            lightsPhysicalParsFragment
+                        )
                         .replace(
                             '#include <lights_physical_fragment>',
                             lightsPhysicalFragment
