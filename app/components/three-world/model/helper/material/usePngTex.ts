@@ -25,11 +25,14 @@ function usePngTex(model: THREE.SkinnedMesh) {
 
     const skin = useTexture("https://raw.githubusercontent.com/ray-cast/ray-mmd/master/Materials/_MaterialMap/skin.png");
     const fabric = useTexture("https://raw.githubusercontent.com/ray-cast/ray-mmd/master/Materials/_MaterialMap/Fabric02_N by 2gou.bmp");
+    const shift2 = useTexture("https://raw.githubusercontent.com/ray-cast/ray-mmd/master/Materials/_MaterialMap/shift2.png");
+
 
     const mapOptions: Record<string, THREE.Texture> = {
         none: null as null,
         skin,
         fabric,
+        shift2,
         ...pngTexs
     };
 

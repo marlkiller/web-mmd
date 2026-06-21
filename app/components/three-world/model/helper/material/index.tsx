@@ -10,6 +10,8 @@ import { useModel } from '../ModelContext';
 import isRenderGui from '../useRenderGui';
 import usePngTex from './usePngTex';
 import { ColorRepresentation } from 'three';
+import defaultStyles from './default-styles.json'
+import lightsPhysicalFragment from './shaders/lights_physical_fragment.frag'
 
 function Material() {
     const model = useModel()
@@ -56,6 +58,7 @@ function Material() {
         subNormalMap: "none",
         subNormalMapLoop: 1,
         anisotropyMap: "none",
+        anisotropyMapLoop: 1,
         envMap: "none",
     }
 
@@ -198,6 +201,22 @@ function Material() {
             material.customProgramCacheKey = () => cacheKey;
         }
 
+        const AnisotropyMapping = (texture: THREE.Texture) => {
+            if (!texture) {
+                delete onBeforeCompiles["AnisotropyMapping"]
+            } else {
+                onBeforeCompiles["AnisotropyMapping"] = (parameters, renderer) => {
+                    parameters.fragmentShader = parameters.fragmentShader
+                        .replace(
+                            '#include <lights_physical_fragment>',
+                            lightsPhysicalFragment
+                        )
+                }
+            }
+            const cacheKey = Math.random().toString()
+            material.customProgramCacheKey = () => cacheKey;
+        }
+
         const buildMapLoop = (key: string, getTexture: () => THREE.Texture | null) => {
             const handler = (val: number) => {
                 const texture = getTexture()
@@ -214,7 +233,8 @@ function Material() {
             'color': buildMGuiItem("color"),
             'map': buildMapItem("map"),
             'anisotropy': buildMGuiItem("anisotropy"),
-            'anisotropyMap': buildMapItem("anisotropyMap"),
+            'anisotropyMap': buildMapItem("anisotropyMap", "anisotropyMap", AnisotropyMapping),
+            'anisotropyMapLoop': buildMapLoop("anisotropyMapLoop", () => material.anisotropyMap),
             'anisotropyRotation': buildMGuiItem("anisotropyRotation", null, 0, Math.PI * 2),
             'emissive': buildMGuiItem("emissive"),
             'emissiveMap': buildMapItem("emissiveMap"),
@@ -342,7 +362,11 @@ function Material() {
             materials.map((m, i) => [m.name, i])
         ), [model])
 
-    const styles = usePresetStore(states => states.materialStyles)
+    const materialStyles = usePresetStore(states => states.materialStyles)
+    const styles = useMemo(() => ({
+        ...defaultStyles,
+        ...materialStyles
+    }), [materialStyles]) as Record<string, any>
     const styleOptions = useMemo(() => [
         "none",
         ...Object.keys(styles)

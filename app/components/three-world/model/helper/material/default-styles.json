@@ -1,0 +1,46 @@
+{
+    "hair": {
+        "userData": {
+            "normalMap": "skin",
+            "normalMapLoop": 80,
+            "style": "hair"
+        },
+        "roughness": 0.64
+    },
+    "skin": {
+        "userData": {
+            "style": "skin",
+            "normalMap": "skin",
+            "normalMapLoop": 80
+        },
+        "roughness": 0.81
+    },
+    "eyes": {
+        "transmission": 1,
+        "emissive": {
+            "isColor": true,
+            "r": 0,
+            "g": 0,
+            "b": 0
+        },
+        "roughness": 0,
+        "userData": {
+            "style": "eyes"
+        }
+    },
+    "cloth": {
+        "userData": {
+            "style": "cloth",
+            "normalMap": "fabric",
+            "normalMapLoop": 5
+        },
+        "roughness": 0.64,
+        "sheenColor": {
+            "isColor": true,
+            "r": 0.174647403645279,
+            "g": 0.174647403645279,
+            "b": 0.174647403645279
+        },
+        "sheen": 1
+    }
+}
