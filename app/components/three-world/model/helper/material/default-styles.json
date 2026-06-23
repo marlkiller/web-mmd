@@ -5,7 +5,7 @@
             "normalMapLoop": 80,
             "style": "hair"
         },
-        "roughness": 0.64
+        "roughness": 0.2
     },
     "skin": {
         "userData": {
@@ -13,7 +13,7 @@
             "normalMap": "skin",
             "normalMapLoop": 80
         },
-        "roughness": 0.81
+        "roughness": 0.9
     },
     "eyes": {
         "transmission": 1,
@@ -34,7 +34,7 @@
             "normalMap": "fabric",
             "normalMapLoop": 5
         },
-        "roughness": 0.64,
+        "roughness": 0.8,
         "sheenColor": {
             "isColor": true,
             "r": 0.174647403645279,
