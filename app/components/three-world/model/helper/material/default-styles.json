@@ -1,11 +1,12 @@
 {
     "hair": {
         "userData": {
-            "normalMap": "skin",
-            "normalMapLoop": 80,
-            "style": "hair"
+            "style": "hair",
+            "anisotropyMap": "shift2",
+            "anisotropyMapLoop": 8
         },
-        "roughness": 0.2
+        "roughness": 0.2,
+        "anisotropy": 1
     },
     "skin": {
         "userData": {
