@@ -21,7 +21,7 @@ export default async (phase: string) => {
             config
         ) => {
             config.module.rules.push({
-                test: /\.(vert|frag)$/,
+                test: /\.(vert|frag|glsl)$/,
                 loader: 'raw-loader'
             })
             config.resolve.fallback = { fs: false };

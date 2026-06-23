@@ -11,8 +11,9 @@ import isRenderGui from '../useRenderGui';
 import usePngTex from './usePngTex';
 import { ColorRepresentation } from 'three';
 import defaultStyles from './default-styles.json'
-import lightsPhysicalFragment from './shaders/lights_physical_fragment.frag'
-import lightsPhysicalParsFragment from './shaders/lights_physical_pars_fragment.frag'
+import lightsPhysicalFragment from './shaders/lights_physical_fragment.glsl'
+import lightsPhysicalParsFragment from './shaders/lights_physical_pars_fragment.glsl'
+import commonGLSL from './shaders/common.glsl'
 
 function Material() {
     const model = useModel()
@@ -215,6 +216,10 @@ function Material() {
                         .replace(
                             '#include <lights_physical_fragment>',
                             lightsPhysicalFragment
+                        )
+                        .replaceAll(
+                            '#include <common>',
+                            commonGLSL
                         )
                 }
             }
