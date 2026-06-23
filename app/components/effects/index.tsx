@@ -1,4 +1,4 @@
-import { Bloom, EffectComposer } from "@react-three/postprocessing";
+import { EffectComposer } from "@react-three/postprocessing";
 import { useControls } from "leva";
 import { useMemo, useState } from "react";
 import OutlinePass from "./OutlinePass";
@@ -7,6 +7,7 @@ import { HexDofEffect } from "@/app/modules/effects/HexDofEffect";
 import { buildGuiItem, buildGuiObj, buildGuiFunc } from "@/app/utils/gui";
 import { useFrame, useThree } from "@react-three/fiber";
 import { DepthOfField } from "./DepthOfField";
+import { Bloom } from "./Bloom";
 import { FloatType, Texture, Vector3 } from "three";
 import { TextureEffectComp } from "./TextureEffectComp";
 import { ColorChannel } from "postprocessing";
